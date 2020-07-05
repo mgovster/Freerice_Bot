@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup
 import os
 import time, shutil
 import ctypes
-import winsound
+import winsound, random
 user32 = ctypes.windll.user32
 screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 
@@ -50,17 +50,18 @@ EasiestSettingGreen = r'images/EasiestGreen.PNG'
 EasiestSettingYellow = r'images/EasiestYellow.PNG'
 EasiestSettingRed = r'images/EasiestRed.PNG'
 RiceBowl = r'images/RiceBowl.PNG'
+LoginButton = r'images/Login.PNG'
 
 
 def main():
     time.sleep(1.5)
     #firstSaveSite()
     
-    
     setButtonLocations()
     saveSite()
     count = 0
     bigboicount = 0
+    bigboicap = random.randint(50,100)
     while(True):
         getChoices()
         answerAndPick()     #answers problem and selects based on such choice
@@ -70,18 +71,25 @@ def main():
         #if(count > 8):
         #    resetDifficulty()
         #    count = 0
-        if(bigboicount>50):
+        if(bigboicount>bigboicap):
             refreshPage()
             time.sleep(.7)
             bigboicount = 0
+            bigboicap = random.randint(50,100)
         saveSite()          #save page once done waiting, and loop around again
+        time.sleep(.2)
     
     
 
 def resetDifficulty():
     menu = py.locateOnScreen(MenuButton,confidence=.8)
+    counter = 0
+    time_inc = .5
     while menu is None:
-        time.sleep(.5)
+        counter += time_inc
+        time.sleep(time_inc)
+        if(counter > 10):
+            refreshPage()
         menu = py.locateOnScreen(MenuButton,confidence=.8)
     py.click(menu)
     time.sleep(.3)
@@ -119,7 +127,7 @@ def waitForQuestion():
     time.sleep(1.7)
 
 def refreshPage():
-    for _ in range(0,5):
+    for _ in range(0,3):
         py.click(py.locateOnScreen(RefreshPageButton))
         time.sleep(1)
 
@@ -195,9 +203,14 @@ def saveSite():
     waitForDownload()
 
 def waitForDownload():
+    count=0.0
+    inc_time = .5
     while(py.locateOnScreen(DoneSaving,region = (0,675,50,100), confidence=.9) is None):
         while(py.locateOnScreen(DoneSaving,region = (0,675,50,100), confidence=.9) is None):
-            time.sleep(.5)
+            count+=inc_time
+            time.sleep(inc_time)
+            if(count > 25):
+                return
         time.sleep(.1)
     #goes through twice because chance of it flashing (idk if its done by this time or not but better safe than sorry)
 
@@ -209,14 +222,43 @@ def deleteExtraFolder():
 
 
     
+def refreshPageInfinite(game):
+    i = 0
+    while game == None:
+        py.click(py.locateOnScreen(RefreshPageButton))
+        time.sleep(1)
+        i+=1
+        game = soup.find('div',class_='game-block')
+        if(i >15):
+            profileLogIn()
+        
+def profileLogIn():
+    #open close tabs
+    #if login found, log in
+    #play again
+    openCloseNewFR()
+    if(py.locateOnScreen(LoginButton, confidence=.7)):
+        loginEnterCredentials()
+         
+def loginEnterCredentials():
+    pass
+
 def getChoices():
     global DaQuestion, DaFirstChoice,DaSecondChoice,DaThirdChoice,DaFourthChoice
     with open('Freerice.html') as html_file:
         soup = BeautifulSoup(html_file, 'lxml')
-
     game = soup.find('div', class_='game-block')
-
+    while game == None:
+        refreshPageInfinite(game)
+        game = soup.find('div',class_='game-block')
     #question holds answers and such too
+
+    actual_game = game.find('div',class_='question')
+    question = actual_game.find('div', class_='card-title')
+    DaQuestion = question.contents[0]
+
+    
+        
     actual_game = game.find('div',class_='question')
     question = actual_game.find('div', class_='card-title')
     DaQuestion = question.contents[0]
@@ -227,7 +269,15 @@ def getChoices():
     DaThirdChoice = int(choice_list[2].contents[0])
     DaFourthChoice = int(choice_list[3].contents[0])
 
-    
+def openCloseNewFR():
+    py.hotkey('ctrl','w')
+    py.hotkey('ctrl','t')
+    time.sleep(.5)
+    py.typewrite('FreeRice.com')
+    py.press('enter')
+    time.sleep(.1)
+    py.press('enter')
     
 if __name__ == "__main__":
     main()
+    #openClose()
